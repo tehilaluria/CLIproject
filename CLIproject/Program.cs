@@ -3,10 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-// הגדרת תיקיות שיש לדלג עליהן
+// Define directories to exclude
 var excludedDirectories = new[] { "bin", "debug", "obj" };
 
-// הגדרת אפשרויות
+// Define options
 var outputOption = new Option<FileInfo>("--output", "File path and name") { IsRequired = true };
 outputOption.AddAlias("-o");
 
@@ -25,7 +25,7 @@ removeEmptyLinesOption.AddAlias("-r");
 var authorOption = new Option<string>("--author", "Author name to add as a comment.");
 authorOption.AddAlias("-a");
 
-// הגדרת פקודה
+// Define the bundle command
 var bundleCommand = new Command("bundle", "Bundle code files to a single file.")
 {
     outputOption,
@@ -36,16 +36,16 @@ var bundleCommand = new Command("bundle", "Bundle code files to a single file.")
     authorOption
 };
 
-// מימוש הלוגיקה של עיבוד הפקודה
+// Implement the command logic
 bundleCommand.SetHandler<FileInfo, string, bool, string, bool, string>(
     (output, language, note, sort, removeEmptyLines, author) =>
     {
         try
         {
-            // רשימת שפות נתמכות
+            // Supported languages list
             var supportedLanguages = new[] { "cs", "c", "cpp", "js", "jsx", "py", "java", "txt" };
 
-            // פענוח שפות מהאפשרות
+            // Parse languages from the option
             var selectedLanguages = language.Equals("all", StringComparison.OrdinalIgnoreCase)
                 ? supportedLanguages
                 : language.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -59,7 +59,7 @@ bundleCommand.SetHandler<FileInfo, string, bool, string, bool, string>(
                 return;
             }
 
-            // איתור כל הקבצים בתיקייה הנוכחית שעונים לקריטריונים
+            // Find all files in the current directory that match the criteria
             var files = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.*", SearchOption.AllDirectories)
                 .Where(file =>
                 {
@@ -76,7 +76,7 @@ bundleCommand.SetHandler<FileInfo, string, bool, string, bool, string>(
                 return;
             }
 
-            // מיון קבצים
+            // Sort files
             files = sort switch
             {
                 "name" => files.OrderBy(Path.GetFileName).ToList(),
@@ -84,7 +84,7 @@ bundleCommand.SetHandler<FileInfo, string, bool, string, bool, string>(
                 _ => files
             };
 
-            // יצירת קובץ הפלט ואיחוד הקבצים לתוכו
+            // Create the output file and bundle the files into it
             using var writer = new StreamWriter(output.FullName, false, Encoding.UTF8);
 
             if (!string.IsNullOrWhiteSpace(author))
@@ -97,7 +97,7 @@ bundleCommand.SetHandler<FileInfo, string, bool, string, bool, string>(
             {
                 var fileName = Path.GetFileName(file);
 
-                // הוספת הערה עם שם הקובץ לפני התוכן
+                // Add comment with the file name before the content
                 writer.WriteLine($"// Start of file: {fileName}");
                 writer.WriteLine();
 
@@ -120,10 +120,10 @@ bundleCommand.SetHandler<FileInfo, string, bool, string, bool, string>(
                     writer.WriteLine(line);
                 }
 
-                // הוספת הערה עם שם הקובץ אחרי התוכן
+                // Add comment with the file name after the content
                 writer.WriteLine();
                 writer.WriteLine($"// End of file: {fileName}");
-                writer.WriteLine(); // הוספת שורה ריקה בין קבצים
+                writer.WriteLine(); // Add a blank line between files
             }
 
             Console.WriteLine($"Bundle created successfully at {output.FullName}");
@@ -136,11 +136,11 @@ bundleCommand.SetHandler<FileInfo, string, bool, string, bool, string>(
     outputOption, languageOption, noteOption, sortOption, removeEmptyLinesOption, authorOption
 );
 
-
 var createRspCommand = new Command("create-rsp", "Create a response file for the bundle command.");
 createRspCommand.SetHandler(() =>
 {
-    try {
+    try
+    {
         Console.Write("Enter output file path and name (e.g., output.txt): ");
         var output = Console.ReadLine() ?? string.Empty;
 
@@ -160,7 +160,7 @@ createRspCommand.SetHandler(() =>
         Console.Write("Enter author name (optional): ");
         var author = Console.ReadLine();
 
-        // יצירת תוכן קובץ התגובה
+        // Create the content for the response file
         var responseFileContent = new StringBuilder();
         responseFileContent.AppendLine($"--output {output}");
         responseFileContent.AppendLine($"--language {languages}");
@@ -169,7 +169,7 @@ createRspCommand.SetHandler(() =>
         if (removeEmptyLines) responseFileContent.AppendLine("--remove-empty-lines");
         if (!string.IsNullOrWhiteSpace(author)) responseFileContent.AppendLine($"--author \"{author}\"");
 
-        // שמירת קובץ התגובה
+        // Save the response file
         var responseFileName = "bundle.rsp";
         File.WriteAllText(responseFileName, responseFileContent.ToString());
 
@@ -183,14 +183,10 @@ createRspCommand.SetHandler(() =>
 
 });
 
-
-// הגדרת RootCommand
+// Define the RootCommand
 var rootCommand = new RootCommand("Root command for File Bundler CLI");
 rootCommand.AddCommand(bundleCommand);
 rootCommand.AddCommand(createRspCommand);
 
-// הפעלת RootCommand
+// Execute the RootCommand
 await rootCommand.InvokeAsync(args);
-
-
-
